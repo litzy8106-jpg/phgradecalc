@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PH Grade Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#F2F3EF; --surface:#FFFFFF; --sunk:#F7F8F5; --ink:#1B1E1A; --muted:#5E655C; --line:#D9DCD4; --line-2:#E8EAE4;
+  --maroon:#7A1F2B; --maroon-soft:#F4E6E8; --green:#1F5A3F; --green-soft:#E2EFE7;
+  --amber:#8E5A0C; --amber-soft:#F7ECD8; --red:#A8261D; --red-soft:#F8E1DE;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Public Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#121512; --surface:#1A1E1A; --sunk:#151815; --ink:#E7EAE4; --muted:#9BA298; --line:#2F352F; --line-2:#252A25;
+    --maroon:#E08894; --maroon-soft:#3A2226; --green:#7CC79E; --green-soft:#1B3326;
+    --amber:#E0AE5C; --amber-soft:#3A2D16; --red:#F08A80; --red-soft:#3D1F1C;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#121512; --surface:#1A1E1A; --sunk:#151815; --ink:#E7EAE4; --muted:#9BA298; --line:#2F352F; --line-2:#252A25;
+  --maroon:#E08894; --maroon-soft:#3A2226; --green:#7CC79E; --green-soft:#1B3326;
+  --amber:#E0AE5C; --amber-soft:#3A2D16; --red:#F08A80; --red-soft:#3D1F1C;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:28px 64px}
+.wrap{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.num,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--maroon);outline-offset:2px}
+
+/* header */
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--maroon);font-weight:600}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,6vw,44px);line-height:1.05;margin:4px 0 0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);margin:6px 0 0;max-width:62ch}
+
+/* summary */
+.summary{display:grid;grid-template-columns:1.3fr 1fr 1fr;border:1px solid var(--line);background:var(--surface);border-radius:10px;overflow:hidden}
+.summary>div{padding:16px 18px;border-right:1px solid var(--line-2);display:flex;flex-direction:column;gap:4px;min-width:0}
+.summary>div:last-child{border-right:0}
+.s-label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.s-big{font-family:var(--mono);font-size:38px;font-weight:500;line-height:1.1;font-variant-numeric:tabular-nums}
+.s-mid{font-family:var(--mono);font-size:24px;font-weight:500;line-height:1.2;font-variant-numeric:tabular-nums}
+.s-note{font-size:13px;color:var(--muted)}
+@media (max-width:640px){.summary{grid-template-columns:1fr 1fr}.summary>div:first-child{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--line-2)}}
+
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.pill.good{background:var(--green-soft);color:var(--green)}
+.pill.warn{background:var(--amber-soft);color:var(--amber)}
+.pill.bad{background:var(--red-soft);color:var(--red)}
+.pill.plain{background:var(--sunk);color:var(--muted);border:1px solid var(--line-2)}
+.pill.accent{background:var(--maroon-soft);color:var(--maroon)}
+
+/* term nav */
+.terms{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
+.years,.sems{display:flex;gap:4px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:var(--surface);padding:7px 13px;border-radius:7px;font-size:14px;font-weight:500}
+.tab[aria-pressed="true"]{background:var(--maroon);border-color:var(--maroon);color:var(--surface)}
+.tab .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.5;margin-left:6px;vertical-align:middle}
+
+/* course list */
+.list{display:flex;flex-direction:column;gap:10px}
+.group-h{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:8px 0 -2px}
+.course{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.c-head{width:100%;display:grid;grid-template-columns:1fr auto;gap:10px 16px;align-items:center;padding:14px 16px;background:none;border:0;text-align:left;border-radius:10px}
+.c-id{display:flex;flex-direction:column;min-width:0}
+.c-code{font-family:var(--display);font-weight:700;font-size:18px;line-height:1.2}
+.c-code small{font-family:var(--body);font-weight:500;font-size:12px;color:var(--muted);margin-left:8px;letter-spacing:.03em}
+.c-title{color:var(--muted);font-size:13.5px}
+.c-res{display:flex;align-items:center;gap:14px}
+.c-pct{font-family:var(--mono);font-size:13px;color:var(--muted);text-align:right;line-height:1.3}
+.grade{font-family:var(--mono);font-weight:500;font-size:20px;min-width:66px;text-align:center;padding:5px 8px;border-radius:7px;border:1px solid var(--line);background:var(--sunk)}
+.grade.good{background:var(--green-soft);border-color:transparent;color:var(--green)}
+.grade.warn{background:var(--amber-soft);border-color:transparent;color:var(--amber)}
+.grade.bad{background:var(--red-soft);border-color:transparent;color:var(--red)}
+.grade.none{color:var(--muted)}
+.bar{grid-column:1/-1;height:4px;background:var(--line-2);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--maroon);border-radius:4px;transition:width .2s}
+.chev{width:10px;height:10px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 4px 4px 0;transition:transform .15s}
+.course.open .chev{transform:rotate(-135deg);margin:4px 4px 0 0}
+@media (max-width:520px){.c-pct{display:none}.c-head{padding:12px}}
+
+.c-body{border-top:1px solid var(--line-2);padding:14px 16px 18px;display:flex;flex-direction:column;gap:16px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:5px 11px;font-size:13px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.need{font-size:13.5px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.need select{padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+
+.grp{display:flex;flex-direction:column;gap:10px}
+.grp-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.grp-h b{font-family:var(--display);font-size:16px}
+.grp-h span{font-size:13px;color:var(--muted)}
+
+.comp{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;padding:10px 12px;border-radius:8px;background:var(--sunk);border:1px solid var(--line-2)}
+.comp-h{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.comp-name{font-weight:600;font-size:14px}
+.comp-name .w{font-family:var(--mono);font-weight:400;font-size:12px;color:var(--maroon);margin-left:6px}
+.comp-hint{font-size:12.5px;color:var(--muted)}
+.comp-pct{font-family:var(--mono);font-size:14px;white-space:nowrap}
+.items{display:flex;flex-direction:column;gap:6px}
+.item{display:grid;grid-template-columns:minmax(80px,1fr) 78px 12px 78px 64px 28px;gap:6px;align-items:center}
+.item.rating{grid-template-columns:minmax(80px,1fr) 100px 64px 28px}
+.item label{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .slash{color:var(--muted);text-align:center}
+.item .ip{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:right}
+input.n{width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:6px;background:var(--surface);font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums;text-align:right}
+input.n::placeholder{color:var(--muted);opacity:.6}
+.x{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px;border-radius:4px}
+.x:hover{color:var(--red)}
+.add{justify-self:start;border:1px dashed var(--line);background:none;padding:4px 10px;border-radius:6px;font-size:13px;color:var(--muted)}
+.add:hover{color:var(--ink);border-color:var(--muted)}
+@media (max-width:520px){.item{grid-template-columns:1fr 64px 10px 64px 26px}.item .ip{display:none}.item.rating{grid-template-columns:1fr 90px 26px}}
+
+.callout{font-size:13.5px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--sunk);color:var(--ink)}
+.callout.warn{background:var(--amber-soft);border-color:transparent}
+.callout b{font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.chk{display:inline-flex;gap:7px;align-items:center;font-size:14px}
+.direct{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:14px}
+.direct select, .custom select, .custom input{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+
+details.scale summary{cursor:pointer;font-size:13px;color:var(--muted)}
+.scale-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin-top:8px}
+.scale-grid label{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12.5px}
+.scale-grid input{width:58px}
+.linkbtn{border:0;background:none;color:var(--maroon);font-size:13px;padding:0;text-decoration:underline;text-underline-offset:2px}
+
+.custom{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;border:1px dashed var(--line);border-radius:10px}
+.custom input{width:130px}
+.custom input.units{width:70px}
+.btn{border:1px solid var(--ink);background:var(--ink);color:var(--surface);padding:6px 12px;border-radius:7px;font-size:13.5px;font-weight:500}
+.btn.ghost{background:var(--surface);color:var(--ink);border-color:var(--line)}
+
+.foot{border-top:1px solid var(--line);padding-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.foot h2{font-family:var(--display);font-size:17px;margin:0 0 8px}
+.foot p,.foot li{font-size:13.5px;color:var(--muted);margin:0}
+.foot ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+.foot textarea{width:100%;min-height:70px;font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:8px;margin-top:8px}
+.msg{font-size:13px;color:var(--green);min-height:1.2em}
+@media (max-width:700px){.foot{grid-template-columns:1fr}}
+.report{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px 6px}
+.report h2{font-family:var(--display);font-size:18px;margin:0 0 2px}
+.report .r-sub{font-size:13px;color:var(--muted);margin:0 0 10px}
+.tbl-wrap{overflow-x:auto}
+.report table{width:100%;border-collapse:collapse;font-size:14px}
+.report th{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:right;padding:6px 8px;border-bottom:1px solid var(--line)}
+.report th:first-child,.report td:first-child{text-align:left;padding-left:0}
+.report td{padding:8px;border-bottom:1px solid var(--line-2);text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.report td:first-child{font-family:var(--body);white-space:normal}
+.report td .st{display:block;font-family:var(--body);font-size:12px;color:var(--muted)}
+.report tr.off td{color:var(--muted)}
+.report tfoot td{border-bottom:0;font-weight:600;padding-top:10px}
+.report tfoot td.big{font-size:20px;color:var(--maroon)}
+.report .g{display:inline-block;min-width:48px;text-align:center;padding:2px 6px;border-radius:6px;background:var(--sunk)}
+.report .g.good{background:var(--green-soft);color:var(--green)}
+.report .g.warn{background:var(--amber-soft);color:var(--amber)}
+.report .g.bad{background:var(--red-soft);color:var(--red)}
+@media (max-width:520px){.report .hide-sm{display:none}}
+.empty{padding:22px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:14px;text-align:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">BS Public Health · UP Manila</div>
+    <h1>Grade Ledger</h1>
+    <p class="sub">Enter scores as they come in. Each course uses the weights and transmutation table from its course guide, and your semester GWA updates as you go.</p>
+  </header>
+
+  <section class="summary" aria-label="Summary">
+    <div>
+      <span class="s-label" id="sum-term-label">Semester GWA</span>
+      <span class="s-big" id="sum-gwa">—</span>
+      <span class="row" id="sum-gwa-note"></span>
+    </div>
+    <div>
+      <span class="s-label">Cumulative GWA</span>
+      <span class="s-mid" id="sum-cum">—</span>
+      <span class="s-note" id="sum-cum-note"></span>
+    </div>
+    <div>
+      <span class="s-label">Academic units</span>
+      <span class="s-mid" id="sum-units">—</span>
+      <span class="s-note" id="sum-units-note"></span>
+    </div>
+  </section>
+
+  <nav class="terms" aria-label="Term">
+    <div class="years" id="years"></div>
+    <div class="sems" id="sems"></div>
+  </nav>
+
+  <section class="report" aria-labelledby="rep-h">
+    <h2 id="rep-h">Grades per subject</h2>
+    <p class="r-sub" id="rep-sub">Computed from the scores you enter below.</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th scope="col">Subject</th><th scope="col" class="hide-sm">Score</th><th scope="col">Grade</th><th scope="col">Units</th><th scope="col" class="hide-sm">Grade × units</th></tr></thead>
+      <tbody id="rep-body"></tbody>
+      <tfoot id="rep-foot"></tfoot>
+    </table></div>
+  </section>
+
+  <section class="list" id="list"></section>
+
+  <footer class="foot">
+    <div>
+      <h2>Settings and backup</h2>
+      <label class="chk"><input type="checkbox" id="opt-round"> Round percentages to a whole number before transmuting</label>
+      <p style="margin-top:6px">Off by default, so 89.6% stays 89.6%. Turn it on if your instructor rounds (89.5% → 90%).</p>
+      <div class="row" style="margin-top:14px">
+        <button class="btn ghost" id="copy-backup" type="button">Copy backup code</button>
+        <button class="btn ghost" id="restore" type="button">Restore from code</button>
+      </div>
+      <textarea id="backup-box" placeholder="Paste a backup code here, then press Restore" aria-label="Backup code"></textarea>
+      <div class="msg" id="backup-msg"></div>
+      <p>Grades save in this browser only. Copy the backup code now and then if you switch phones or clear your browser.</p>
+    </div>
+    <div>
+      <h2>How grades are computed</h2>
+      <ul>
+        <li>Items inside a component are averaged with equal weight (e.g. every quiz counts the same). A blank total counts as 100.</li>
+        <li>Components you haven't filled in are left out, so the grade shown is your current standing on what's been graded.</li>
+        <li>GWA = Σ(grade × units) ÷ Σ units. NSTP and PE are shown but don't count toward GWA.</li>
+        <li>Honors lines: per semester, University Scholar ≤ 1.45 and College Scholar ≤ 1.75; at graduation, Summa ≤ 1.20, Magna ≤ 1.45, Cum Laude ≤ 1.75. Other conditions (full load, no failing grades) also apply.</li>
+        <li>Bio 110 lab uses the Lab 7 weights (exams 60, quizzes 20, worksheets and reports 15, performance 5). Chem 18's percent-to-grade table isn't in the syllabus, so it borrows the Bio scale; edit it under the course's grading scale once you know the real one.</li>
+      </ul>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+var GRADES=[1,1.25,1.5,1.75,2,2.25,2.5,2.75,3,4,5];
+var SCALES={
+  bio:[93,90,87,84,80,75,70,65,60,54,0],
+  comm:[97,94,91,87,83,78,72,66,60,50,0],
+  math:[93,90,87,84,80,75,70,60,50,45,0]
+};
+var RATING_BANDS=[1.13,1.38,1.63,1.88,2.13,2.38,2.63,2.88,3.50,4.50,99];
+function eqItems(prefix,n){var a=[];for(var i=1;i<=n;i++)a.push({n:prefix+" "+i,w:1});return a;}
+
+var COURSES={
+ y1s1:[
+  {id:"math10",code:"Math 10",tag:"GE Core 1",title:"Mathematics, Culture, and Society",units:3,gwa:true,type:"pct",scale:"math",
+   groups:[{name:null,w:100,comps:[
+    {id:"quiz",name:"Quizzes",w:15,kind:"list",label:"Quiz",hint:"3–6 quizzes or seatworks"},
+    {id:"act",name:"Group / individual activities",w:25,kind:"list",label:"Activity",hint:"4–7 activities"},
+    {id:"exam",name:"Midterm and final exam",w:40,kind:"fixed",items:[{n:"Midterm (Oct 14)",w:1},{n:"Final (Dec 7)",w:1}],hint:"Assumed to count equally"},
+    {id:"cap",name:"Capstone project",w:20,kind:"fixed",items:[{n:"Faculty grade",w:50},{n:"Peer rating",w:30},{n:"Self-rating",w:20}],hint:"50% faculty, 30% peer, 20% self · due Nov 27"}
+   ]}]},
+  {id:"comm10",code:"Comm 10",tag:"GE Core 2",title:"Critical Perspectives in Communication",units:3,gwa:true,type:"pct",scale:"comm",
+   groups:[{name:null,w:100,comps:[
+    {id:"a13",name:"Assignments 1–3",w:50,kind:"fixed",items:eqItems("Assignment",3),hint:"Assumed to count equally"},
+    {id:"a4",name:"Assignment 4",w:20,kind:"fixed",items:[{n:"Assignment 4",w:1}]},
+    {id:"qea",name:"QEA (quizzes, activities, exercises)",w:20,kind:"list",label:"QEA"},
+    {id:"att",name:"Class attendance and participation",w:10,kind:"fixed",items:[{n:"Attendance & participation",w:1}],hint:"More than 6 absences = 5.00"}
+   ]}]},
+  {id:"kas1",code:"Kas 1",tag:"GE Core 3",title:"Kasaysayan ng Pilipinas",units:3,gwa:true,type:"rating",
+   groups:[{name:null,w:100,comps:[
+    {id:"rec",name:"Recitation on the study and relevance of Philippine history",w:5},
+    {id:"map",name:"Development mapping of precolonial communities",w:10},
+    {id:"lq1",name:"Long Quiz 1",w:15,hint:"Introduction, precolonial period, Islamic communities"},
+    {id:"mid",name:"Midterm exam",w:15},
+    {id:"rep",name:"Reporting / presentation",w:15},
+    {id:"lq2",name:"Long Quiz 2",w:15,hint:"Spanish, American and Japanese colonial periods"},
+    {id:"fin",name:"Finals exam",w:15},
+    {id:"cp",name:"Class participation and attendance",w:10}
+   ]}]},
+  {id:"bio110",code:"Bio 110",tag:"Lab 7",title:"Integrated Principles of Biology",units:5,gwa:true,type:"pct",scale:"bio",special:"bio",
+   groups:[
+    {name:"Lecture",w:60,comps:[
+     {id:"lq",name:"Quizzes",w:15,kind:"list",label:"Quiz"},
+     {id:"las",name:"Assignments",w:10,kind:"list",label:"Assignment"},
+     {id:"lle",name:"Long exams",w:60,kind:"fixed",items:eqItems("LE",4),hint:"Four departmental exams"},
+     {id:"lop",name:"Oral presentation",w:5,kind:"fixed",items:[{n:"Oral presentation",w:1}]},
+     {id:"lcp",name:"Critique paper",w:10,kind:"fixed",items:[{n:"Critique paper",w:1}]}
+    ]},
+    {name:"Laboratory",w:40,comps:[
+     {id:"xle",name:"Lab exams",w:60,kind:"fixed",items:[{n:"Dept exam 1",w:1},{n:"Dept exam 2",w:1},{n:"Dept exam 3",w:1},{n:"Non-dept exam",w:1}],hint:"3 departmental + 1 non-departmental"},
+     {id:"xq",name:"Quizzes",w:20,kind:"list",label:"Quiz"},
+     {id:"xws",name:"Worksheets and oral/written reports",w:15,kind:"list",label:"Worksheet"},
+     {id:"xlp",name:"Lab performance",w:5,kind:"fixed",items:[{n:"Performance",w:1}],hint:"Attendance, attire, participation"}
+    ]}
+   ]},
+  {id:"chem18",code:"Chem 18",tag:null,title:"Fundamentals of General Chemistry II",units:3,gwa:true,type:"pct",scale:"bio",scaleAssumed:true,
+   groups:[
+    {name:"Pre-final standing",w:200/3,comps:[
+     {id:"de",name:"Departmental exams",w:60,kind:"fixed",items:eqItems("DE",4),hint:"Four departmental exams"},
+     {id:"ca",name:"Class activities",w:40,kind:"list",label:"Activity",hint:"Quizzes, homework, problem sets, group projects, recitation"}
+    ]},
+    {name:"Final examination",w:100/3,comps:[
+     {id:"fe",name:"Final exam",w:100,kind:"fixed",items:[{n:"Final exam",w:1}]}
+    ]}
+   ]},
+  {id:"nstp1",code:"NSTP 1",tag:null,title:"National Service Training Program",units:3,gwa:false,type:"direct",passRange:true},
+  {id:"pe1",code:"PE 1",tag:null,title:"Physical Education",units:2,gwa:false,type:"direct",passRange:true}
+ ],
+ y1s2:[
+  {id:"core4",code:"GE Core 4",title:"General Education core",units:3,gwa:true,type:"direct"},
+  {id:"chem28",code:"Chem 28",title:"Analytical Chemistry",units:5,gwa:true,type:"direct"},
+  {id:"gee1",code:"GE Elective 1",title:"General Education elective",units:3,gwa:true,type:"direct"},
+  {id:"gee2",code:"GE Elective 2",title:"General Education elective",units:3,gwa:true,type:"direct"},
+  {id:"ph1",code:"PH 1",title:"Introduction to Public Health",units:3,gwa:true,type:"direct"},
+  {id:"nstp2",code:"NSTP 2",title:"National Service Training Program",units:3,gwa:false,type:"direct",passRange:true},
+  {id:"pe2",code:"PE 2",title:"Physical Education",units:2,gwa:false,type:"direct",passRange:true}
+ ]
+};
+var TERMS=[];for(var y=1;y<=4;y++){for(var s=1;s<=2;s++)TERMS.push("y"+y+"s"+s);}
+
+/* ---------- state ---------- */
+var KEY="ph-grade-ledger-v1";
+var state={term:"y1s1",open:{},round:false,c:{},custom:{}};
+try{var raw=localStorage.getItem(KEY);if(raw){var p=JSON.parse(raw);if(p&&typeof p==="object")state=Object.assign(state,p);}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+function cs(id){if(!state.c[id])state.c[id]={mode:null,direct:"",e:{},target:"1",finalOn:false,scale:null};return state.c[id];}
+
+function termCourses(t){return (COURSES[t]||[]).concat(state.custom[t]||[]);}
+function findCourse(id){for(var i=0;i<TERMS.length;i++){var l=termCourses(TERMS[i]);for(var j=0;j<l.length;j++)if(l[j].id===id)return l[j];}return null;}
+function modeOf(c){if(c.type==="direct"||c.custom)return"direct";var m=cs(c.id).mode;return m||"detail";}
+
+/* ---------- math ---------- */
+function num(v){if(v===""||v===null||v===undefined)return null;var n=parseFloat(v);return isFinite(n)?n:null;}
+function r2(x){return Math.round(x*100+1e-7)/100;}
+function scaleOf(c){var o=cs(c.id).scale;return (o&&o.length===11)?o:SCALES[c.scale];}
+function transmute(c,pct){var p=state.round?Math.round(pct):pct;var sc=scaleOf(c);for(var i=0;i<sc.length;i++){if(p>=sc[i])return GRADES[i];}return 5;}
+function ratingToGrade(r){var x3=Math.round(r*1000+1e-7)/1000;var x=Math.round(x3*100+1e-7)/100;for(var i=0;i<RATING_BANDS.length;i++){if(x<=RATING_BANDS[i]+1e-9)return {g:GRADES[i],x:x};}return {g:5,x:x};}
+
+function entries(c,comp){var e=cs(c.id).e;if(!e[comp.id]){
+  if(comp.kind==="list")e[comp.id]=[{s:"",t:""}];
+  else if(comp.kind==="fixed")e[comp.id]=comp.items.map(function(){return{s:"",t:""};});
+  else e[comp.id]={r:""};
+ }return e[comp.id];}
+function itemPct(it){var s=num(it.s);if(s===null)return null;var t=num(it.t);if(t===null)t=100;if(t<=0)return null;return s/t*100;}
+function compPct(c,comp){
+  if(c.type==="rating"){return num(entries(c,comp).r);}
+  var arr=entries(c,comp),sw=0,sum=0;
+  for(var i=0;i<arr.length;i++){var p=itemPct(arr[i]);if(p===null)continue;var w=comp.kind==="fixed"?comp.items[i].w:1;sw+=w;sum+=w*p;}
+  return sw?sum/sw:null;
+}
+function groupStanding(c,g){var d=0,s=0;g.comps.forEach(function(cp){var p=compPct(c,cp);if(p!==null){d+=cp.w;s+=cp.w*p;}});return d?{pct:s/d,done:d}:null;}
+
+function calc(c){
+  var st=cs(c.id),m=modeOf(c);
+  if(m==="direct"){var g=num(st.direct);return {grade:g,done:g===null?0:100,direct:true};}
+  var earned=0,done=0;
+  c.groups.forEach(function(g){g.comps.forEach(function(cp){var p=compPct(c,cp);if(p!==null){var E=g.w*cp.w/100;done+=E;earned+=E*p/100;}});});
+  var res={done:Math.min(100,done),earned:earned};
+  if(!done){res.grade=null;return res;}
+  if(c.type==="rating"){
+    var r=earned/done*100;var rg=ratingToGrade(r);res.rating=rg.x;res.grade=rg.g;
+  }else{
+    var pct=earned/done*100;res.pct=pct;
+    if(c.special==="bio"){
+      var lec=groupStanding(c,c.groups[0]),lab=groupStanding(c,c.groups[1]);res.lec=lec;res.lab=lab;
+      var pfg=(lec&&lab)?(0.6*lec.pct+0.4*lab.pct):pct;res.pfg=pfg;
+      res.finalReq=(pfg<70)||(lec&&lec.pct<60)||(lab&&lab.pct<60);
+      var fe=itemPct(st.bioFinal||{s:"",t:""});
+      if(st.finalOn&&fe!==null){res.pct=0.8*pfg+0.2*fe;res.withFinal=true;}
+      else res.pct=pfg;
+    }
+    res.grade=transmute(c,res.pct);
+  }
+  return res;
+}
+function needed(c,res,target){
+  var R=100-res.done;if(R<=0.001||res.done<=0)return null;
+  var gi=GRADES.indexOf(target);
+  if(c.type==="rating"){
+    var U=RATING_BANDS[gi]+0.00499;var avg=(U-res.earned)*100/R;
+    if(avg>=5)return{kind:"safe"};if(avg<1)return{kind:"gone"};return{kind:"rating",v:avg};
+  }
+  var thr=scaleOf(c)[gi];if(state.round)thr-=0.5;
+  var need=(thr-res.earned)/R*100;
+  if(need<=0)return{kind:"safe"};if(need>100)return{kind:"gone"};return{kind:"pct",v:need};
+}
+function gClass(g){if(g===null||g===undefined)return"none";if(g<=1.75)return"good";if(g<=3)return g<=2.5?"":"warn";return"bad";}
+function fmtG(g){return g===null||g===undefined?"—":g.toFixed(2);}
+
+function termGWA(t){
+  var su=0,sw=0,pending=0,nonpass=[];
+  termCourses(t).forEach(function(c){var r=calc(c);
+    if(!c.gwa){return;}
+    if(r.grade===null){pending++;return;}
+    if(!r.direct&&r.done<99.99)pending++;
+    su+=Number(c.units);sw+=r.grade*Number(c.units);});
+  return {gwa:su?sw/su:null,units:su,pending:pending,total:termCourses(t).filter(function(c){return c.gwa;}).reduce(function(a,c){return a+Number(c.units);},0)};
+}
+
+/* ---------- rendering ---------- */
+var $=function(id){return document.getElementById(id);};
+function esc(s){return String(s).replace(/[&<>"]/g,function(ch){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch];});}
+function termName(t){var y=+t[1],s=+t[3];return ["","First","Second","Third","Fourth"][y]+" year, "+(s===1?"1st":"2nd")+" sem";}
+
+function renderNav(){
+  var y=+state.term[1],s=+state.term[3],h="";
+  for(var i=1;i<=4;i++){var has=termCourses("y"+i+"s1").length+termCourses("y"+i+"s2").length>0;
+    h+='<button class="tab" type="button" data-year="'+i+'" aria-pressed="'+(i===y)+'">Year '+i+(has?'':'')+'</button>';}
+  $("years").innerHTML=h;
+  $("sems").innerHTML=[1,2].map(function(k){return '<button class="tab" type="button" data-sem="'+k+'" aria-pressed="'+(k===s)+'">'+(k===1?"1st sem":"2nd sem")+'</button>';}).join("");
+}
+
+function gradeOptions(sel,passOnly){var opts=passOnly?GRADES.slice(0,9):GRADES;var h='<option value="">No grade yet</option>';opts.forEach(function(g){h+='<option value="'+g+'"'+(num(sel)===g?' selected':'')+'>'+g.toFixed(2)+'</option>';});return h;}
+
+function headHTML(c){
+  return '<button class="c-head" type="button" data-toggle="'+c.id+'" aria-expanded="'+(!!state.open[c.id])+'">'+
+   '<span class="c-id"><span class="c-code">'+esc(c.code)+(c.tag?'<small>'+esc(c.tag)+'</small>':'')+'<small>'+(c.gwa?esc(c.units):'('+esc(c.units)+')')+' units</small></span><span class="c-title">'+esc(c.title||"")+'</span></span>'+
+   '<span class="c-res"><span class="c-pct" id="hp-'+c.id+'"></span><span class="grade" id="hg-'+c.id+'">—</span><span class="chev" aria-hidden="true"></span></span>'+
+   '<span class="bar" aria-hidden="true"><i id="hb-'+c.id+'" style="width:0"></i></span></button>';
+}
+
+function compHTML(c,comp){
+  var h='<div class="comp"><div class="comp-h"><div><div class="comp-name">'+esc(comp.name)+'<span class="w">'+(+comp.w.toFixed(2))+'%</span></div>'+(comp.hint?'<div class="comp-hint">'+esc(comp.hint)+'</div>':'')+'</div><div class="comp-pct" id="cp-'+c.id+'-'+comp.id+'">—</div></div><div class="items">';
+  if(c.type==="rating"){
+    var e=entries(c,comp);
+    h+='<div class="item rating"><label for="i-'+c.id+'-'+comp.id+'">Rating (1.00–5.00)</label><input class="n" inputmode="decimal" id="i-'+c.id+'-'+comp.id+'" data-c="'+c.id+'" data-k="'+comp.id+'" data-f="r" value="'+esc(e.r)+'" placeholder="1.00"><span></span><span></span></div>';
+  }else{
+    var arr=entries(c,comp);
+    arr.forEach(function(it,i){
+      var lab=comp.kind==="fixed"?comp.items[i].n:(comp.label+" "+(i+1));
+      var idb=c.id+'-'+comp.id+'-'+i;
+      h+='<div class="item"><label for="s-'+idb+'">'+esc(lab)+'</label>'+
+        '<input class="n" inputmode="decimal" id="s-'+idb+'" data-c="'+c.id+'" data-k="'+comp.id+'" data-i="'+i+'" data-f="s" value="'+esc(it.s)+'" placeholder="score" aria-label="'+esc(lab)+' score">'+
+        '<span class="slash">/</span>'+
+        '<input class="n" inputmode="decimal" id="t-'+idb+'" data-c="'+c.id+'" data-k="'+comp.id+'" data-i="'+i+'" data-f="t" value="'+esc(it.t)+'" placeholder="100" aria-label="'+esc(lab)+' total">'+
+        '<span class="ip" id="ip-'+idb+'"></span>'+
+        (comp.kind==="list"&&arr.length>1?'<button class="x" type="button" data-del="'+c.id+'|'+comp.id+'|'+i+'" aria-label="Remove '+esc(lab)+'">×</button>':'<span></span>')+'</div>';
+    });
+  }
+  h+='</div>';
+  if(comp.kind==="list")h+='<button class="add" type="button" data-add="'+c.id+'|'+comp.id+'">+ Add '+esc(comp.label.toLowerCase())+'</button>';
+  return h+'</div>';
+}
+
+function bodyHTML(c){
+  var st=cs(c.id),m=modeOf(c),h='<div class="c-body">';
+  if(c.custom||c.type==="direct"){
+    h+='<div class="direct"><label for="d-'+c.id+'">Final grade</label><select id="d-'+c.id+'" data-direct="'+c.id+'">'+gradeOptions(st.direct,c.passRange)+'</select>';
+    if(c.passRange)h+='<span class="comp-hint">An approximate grade is fine. Units shown in parentheses on the curriculum, so this doesn\'t affect GWA.</span>';
+    if(c.custom)h+='<button class="linkbtn" type="button" data-rmcustom="'+c.id+'">Remove course</button>';
+    if(!c.custom&&!c.passRange)h+='<span class="comp-hint">Detailed breakdown can be added once you have the course guide.</span>';
+    return h+'</div></div>';
+  }
+  h+='<div class="toolbar"><div class="seg" role="group" aria-label="Entry mode"><button type="button" data-mode="'+c.id+'|detail" aria-pressed="'+(m==="detail")+'">Score breakdown</button><button type="button" data-mode="'+c.id+'|direct" aria-pressed="'+(m==="direct")+'">Final grade only</button></div>';
+  if(m==="detail"){
+    h+='<div class="need"><label for="tg-'+c.id+'">Target</label><select id="tg-'+c.id+'" data-target="'+c.id+'">'+GRADES.slice(0,9).map(function(g){return'<option value="'+g+'"'+(num(st.target)===g?' selected':'')+'>'+g.toFixed(2)+'</option>';}).join("")+'</select><span id="nd-'+c.id+'"></span></div>';
+  }
+  h+='</div>';
+  if(m==="direct"){
+    h+='<div class="direct"><label for="d-'+c.id+'">Final grade</label><select id="d-'+c.id+'" data-direct="'+c.id+'">'+gradeOptions(st.direct,false)+'</select><span class="comp-hint">Your score breakdown is kept; switch back anytime.</span></div>';
+    return h+'</div>';
+  }
+  if(c.type==="rating")h+='<div class="callout">Your instructor grades each requirement as a rating (1.00, 1.25, …). The weighted sum is taken to three decimals, then rounded: 1.134 → 1.13 → <b>1.00</b>; 1.135 → 1.14 → <b>1.25</b>.</div>';
+  if(c.scaleAssumed)h+='<div class="callout warn">The Chem 18 syllabus doesn\'t list its percent-to-grade table, so this uses the Bio 110 scale for now. Update it below when your instructor gives the real one.</div>';
+  if(c.special==="bio")h+='<div class="callout" id="bio-status-'+c.id+'"></div>';
+  c.groups.forEach(function(g,gi){
+    h+='<div class="grp">';
+    if(g.name)h+='<div class="grp-h"><b>'+esc(g.name)+'</b><span><span class="mono">'+(+g.w.toFixed(2))+'%</span> of course · <span class="mono" id="gs-'+c.id+'-'+gi+'">—</span></span></div>';
+    g.comps.forEach(function(cp){h+=compHTML(c,cp);});
+    h+='</div>';
+  });
+  if(c.special==="bio"){
+    var fe=st.bioFinal||{s:"",t:""};
+    h+='<div class="grp"><div class="grp-h"><b>Comprehensive final exam</b><span>80% pre-final + 20% final</span></div><div class="comp">'+
+      '<label class="chk"><input type="checkbox" id="bf-on-'+c.id+'" data-biofinal="'+c.id+'"'+(st.finalOn?' checked':'')+'> I\'m taking the final exam</label>'+
+      '<div class="comp-hint">Required if your pre-final grade is below 70%, either component is below 60%, or you missed a major exam.</div>'+
+      '<div class="item"><label for="bf-s-'+c.id+'">Final exam</label><input class="n" inputmode="decimal" id="bf-s-'+c.id+'" data-bf="'+c.id+'|s" value="'+esc(fe.s)+'" placeholder="score"><span class="slash">/</span><input class="n" inputmode="decimal" id="bf-t-'+c.id+'" data-bf="'+c.id+'|t" value="'+esc(fe.t)+'" placeholder="100"><span class="ip"></span><span></span></div></div></div>';
+  }
+  if(c.type==="pct"){
+    var sc=scaleOf(c);
+    h+='<details class="scale"><summary>Grading scale (minimum % for each grade)</summary><div class="scale-grid">';
+    for(var i=0;i<10;i++)h+='<label for="sc-'+c.id+'-'+i+'">'+GRADES[i].toFixed(2)+' ≥ <input class="n" id="sc-'+c.id+'-'+i+'" data-scale="'+c.id+'|'+i+'" value="'+sc[i]+'" inputmode="decimal"></label>';
+    h+='</div><div style="margin-top:8px"><button class="linkbtn" type="button" data-resetscale="'+c.id+'">Reset to course guide values</button></div></details>';
+  }
+  return h+'</div>';
+}
+
+function renderList(){
+  var t=state.term,list=termCourses(t),h="";
+  var reg=list.filter(function(c){return c.gwa;}),non=list.filter(function(c){return !c.gwa;});
+  if(!list.length)h+='<div class="empty">No courses yet for '+termName(t)+'. Add them below as you enroll, or wait until the next curriculum sheet is in.</div>';
+  if(reg.length)h+='<div class="group-h">Academic courses</div>';
+  reg.forEach(function(c){h+=cardHTML(c);});
+  if(non.length)h+='<div class="group-h">Non-credit (not in GWA)</div>';
+  non.forEach(function(c){h+=cardHTML(c);});
+  h+='<div class="custom" aria-label="Add a course"><b style="font-size:14px">Add a course</b>'+
+    '<input id="nc-code" placeholder="Code, e.g. PH 101" aria-label="Course code">'+
+    '<input id="nc-units" class="units" inputmode="decimal" placeholder="Units" aria-label="Units">'+
+    '<label class="chk"><input type="checkbox" id="nc-gwa" checked> Counts in GWA</label>'+
+    '<button class="btn" type="button" id="nc-add">Add</button></div>';
+  $("list").innerHTML=h;
+  list.forEach(refreshCourse);
+}
+function cardHTML(c){var open=!!state.open[c.id];return '<article class="course'+(open?' open':'')+'" id="card-'+c.id+'">'+headHTML(c)+(open?bodyHTML(c):'')+'</article>';}
+
+function setText(id,v){var el=$(id);if(el)el.textContent=v;}
+function refreshCourse(c){
+  var r=calc(c),m=modeOf(c);
+  var g=$("hg-"+c.id);if(g){g.textContent=fmtG(r.grade);g.className="grade "+gClass(r.grade);}
+  var pctTxt="";
+  if(!r.direct&&r.grade!==null){pctTxt=(c.type==="rating"?r.rating.toFixed(2)+" rating":r.pct.toFixed(2)+"%")+"<br>"+(r.done>=99.99?"complete":Math.round(r.done)+"% graded");}
+  else if(r.direct&&r.grade!==null)pctTxt="final grade";
+  else pctTxt=m==="direct"?"":"not started";
+  var hp=$("hp-"+c.id);if(hp)hp.innerHTML=pctTxt;
+  var hb=$("hb-"+c.id);if(hb)hb.style.width=(r.direct?(r.grade===null?0:100):r.done)+"%";
+  if(!state.open[c.id]||m==="direct"||c.custom||c.type==="direct")return;
+  c.groups.forEach(function(gr,gi){
+    gr.comps.forEach(function(cp){
+      var p=compPct(c,cp);
+      setText("cp-"+c.id+"-"+cp.id,p===null?"—":(c.type==="rating"?p.toFixed(2):p.toFixed(2)+"%"));
+      if(c.type!=="rating")entries(c,cp).forEach(function(it,i){var ip=itemPct(it);setText("ip-"+c.id+"-"+cp.id+"-"+i,ip===null?"":ip.toFixed(1)+"%");});
+    });
+    var gs=groupStanding(c,gr);
+    if(gr.name)setText("gs-"+c.id+"-"+gi,gs?gs.pct.toFixed(2)+"% → "+fmtG(transmute(c,gs.pct)):"—");
+  });
+  var nd=$("nd-"+c.id);
+  if(nd){var tg=num(cs(c.id).target)||1;var n=r.grade===null?null:needed(c,r,tg);
+    if(r.grade===null)nd.innerHTML='<span class="pill plain">Enter a score to see what you need</span>';
+    else if(!n)nd.innerHTML=r.grade<=tg?'<span class="pill good">Reached</span>':'<span class="pill bad">Missed</span>';
+    else if(n.kind==="safe")nd.innerHTML='<span class="pill good">Locked in, even with zero on the rest</span>';
+    else if(n.kind==="gone")nd.innerHTML='<span class="pill bad">Out of reach on the remaining '+Math.round(100-r.done)+'%</span>';
+    else if(n.kind==="rating")nd.innerHTML='Average rating of <b class="mono">'+n.v.toFixed(2)+'</b> or better on the remaining '+Math.round(100-r.done)+'%';
+    else nd.innerHTML='Need <b class="mono">'+n.v.toFixed(1)+'%</b> average on the remaining '+Math.round(100-r.done)+'%';
+  }
+  if(c.special==="bio"){var bs=$("bio-status-"+c.id);if(bs){
+    var parts=[];
+    parts.push('Lecture <b class="mono">'+(r.lec?r.lec.pct.toFixed(2)+"% ("+fmtG(transmute(c,r.lec.pct))+")":"—")+'</b>');
+    parts.push('Lab <b class="mono">'+(r.lab?r.lab.pct.toFixed(2)+"% ("+fmtG(transmute(c,r.lab.pct))+")":"—")+'</b>');
+    if(r.pfg!==undefined)parts.push('Pre-final <b class="mono">'+r.pfg.toFixed(2)+'%</b>');
+    var tail=r.grade===null?'':(r.finalReq?' <span class="pill warn">Final exam required so far</span>':' <span class="pill good">Exempt from final so far</span>');
+    if(r.withFinal)tail+=' <span class="pill accent">Includes final exam</span>';
+    bs.innerHTML='<div class="row">'+parts.join('<span aria-hidden="true">·</span>')+tail+'</div><div class="comp-hint" style="margin-top:4px">You must pass both lecture and lab (3.00 or better) to pass Bio 110.</div>';
+  }}
+}
+
+function honorsTerm(g){if(g===null)return"";if(g<=1.45)return'<span class="pill good">University Scholar pace</span>';if(g<=1.75)return'<span class="pill good">College Scholar pace</span>';return'<span class="pill plain">Below scholar line (1.75)</span>';}
+function honorsCum(g){if(g===null)return"";if(g<=1.20)return"Summa cum laude pace (≤ 1.20)";if(g<=1.45)return"Magna pace · Summa needs ≤ 1.20";if(g<=1.75)return"Cum laude pace · Summa needs ≤ 1.20";return"Latin honors need ≤ 1.75";}
+function renderReport(){
+  var t=state.term,list=termCourses(t),rows="",su=0,sw=0;
+  list.forEach(function(c){
+    var r=calc(c),g=r.grade,score="—",st="";
+    if(g!==null&&!r.direct){score=c.type==="rating"?r.rating.toFixed(2):r.pct.toFixed(2)+"%";st=r.done>=99.99?"complete":Math.round(r.done)+"% graded";}
+    else if(g!==null&&r.direct){st="final grade";}
+    else st="no scores yet";
+    var counts=c.gwa&&g!==null;
+    if(counts){su+=Number(c.units);sw+=g*Number(c.units);}
+    rows+='<tr'+(c.gwa?'':' class="off"')+'><td>'+esc(c.code)+'<span class="st">'+st+(c.gwa?'':' · not in GWA')+'</span></td><td class="hide-sm">'+score+'</td><td><span class="g '+gClass(g)+'">'+fmtG(g)+'</span></td><td>'+(c.gwa?esc(c.units):'('+esc(c.units)+')')+'</td><td class="hide-sm">'+(counts?(g*Number(c.units)).toFixed(2):'—')+'</td></tr>';
+  });
+  if(!list.length)rows='<tr><td colspan="5">No subjects this semester yet.</td></tr>';
+  $("rep-body").innerHTML=rows;
+  var gwa=su?sw/su:null;
+  $("rep-foot").innerHTML='<tr><td>Semester GWA<span class="st">Σ(grade × units) ÷ '+su+' units</span></td><td class="hide-sm"></td><td class="big">'+(gwa===null?'—':fmtGWA(gwa))+'</td><td>'+su+'</td><td class="hide-sm">'+(su?sw.toFixed(2):'—')+'</td></tr>';
+  setText("rep-sub",termName(t)+" · computed from the scores you enter below. Tap a subject to enter scores.");
+}
+function refreshSummary(){
+  renderReport();
+  var t=termGWA(state.term);
+  setText("sum-term-label",termName(state.term)+" GWA");
+  setText("sum-gwa",t.gwa===null?"—":fmtGWA(t.gwa));
+  var note=honorsTerm(t.gwa);
+  if(t.gwa!==null&&t.pending)note+=' <span class="pill plain">Projected · '+t.pending+' in progress</span>';
+  if(t.gwa===null)note='<span class="s-note">Enter scores to see your GWA</span>';
+  $("sum-gwa-note").innerHTML=note;
+  var su=0,sw=0,terms=0;
+  TERMS.forEach(function(tt){var x=termGWA(tt);if(x.gwa!==null){su+=x.units;sw+=x.gwa*x.units;terms++;}});
+  var cum=su?sw/su:null;
+  setText("sum-cum",cum===null?"—":fmtGWA(cum));
+  setText("sum-cum-note",cum===null?"Across all semesters":honorsCum(cum));
+  setText("sum-units",t.units+" / "+t.total);
+  setText("sum-units-note",t.total?"graded so far this sem":"none this sem yet");
+}
+function fmtGWA(g){return g.toFixed(3);}
+
+function all(){renderNav();renderList();refreshSummary();}
+
+/* ---------- events ---------- */
+document.addEventListener("input",function(ev){
+  var el=ev.target,d=el.dataset;
+  if(d.c&&d.k){var c=findCourse(d.c);var comp=null;c.groups.forEach(function(g){g.comps.forEach(function(x){if(x.id===d.k)comp=x;});});
+    var e=entries(c,comp);if(d.f==="r")e.r=el.value;else e[+d.i][d.f]=el.value;
+    save();refreshCourse(c);refreshSummary();return;}
+  if(d.bf){var p=d.bf.split("|"),st=cs(p[0]);st.bioFinal=st.bioFinal||{s:"",t:""};st.bioFinal[p[1]]=el.value;save();refreshCourse(findCourse(p[0]));refreshSummary();return;}
+  if(d.scale){var q=d.scale.split("|"),c2=findCourse(q[0]),st2=cs(q[0]);var v=num(el.value);if(v===null)return;st2.scale=(st2.scale||SCALES[c2.scale]).slice();st2.scale[+q[1]]=v;save();refreshCourse(c2);refreshSummary();return;}
+});
+document.addEventListener("change",function(ev){
+  var el=ev.target,d=el.dataset;
+  if(d.direct){cs(d.direct).direct=el.value;save();refreshCourse(findCourse(d.direct));refreshSummary();}
+  else if(d.target){cs(d.target).target=el.value;save();refreshCourse(findCourse(d.target));}
+  else if(d.biofinal){cs(d.biofinal).finalOn=el.checked;save();refreshCourse(findCourse(d.biofinal));refreshSummary();}
+  else if(el.id==="opt-round"){state.round=el.checked;save();termCourses(state.term).forEach(refreshCourse);refreshSummary();}
+});
+document.addEventListener("click",function(ev){
+  var b=ev.target.closest("button");if(!b)return;var d=b.dataset;
+  if(d.year){state.term="y"+d.year+"s"+state.term[3];save();all();}
+  else if(d.sem){state.term=state.term.slice(0,3)+d.sem;save();all();}
+  else if(d.toggle){state.open[d.toggle]=!state.open[d.toggle];save();var c=findCourse(d.toggle);var card=$("card-"+c.id);card.outerHTML=cardHTML(c);refreshCourse(c);var nb=$("card-"+c.id).querySelector(".c-head");if(nb)nb.focus();}
+  else if(d.mode){var p=d.mode.split("|");cs(p[0]).mode=p[1];save();rerender(p[0]);}
+  else if(d.add){var a=d.add.split("|"),c1=findCourse(a[0]),comp=null;c1.groups.forEach(function(g){g.comps.forEach(function(x){if(x.id===a[1])comp=x;});});var arr=entries(c1,comp);var last=arr[arr.length-1];arr.push({s:"",t:last?last.t:""});save();rerender(a[0]);var ni=$("s-"+a[0]+"-"+a[1]+"-"+(arr.length-1));if(ni)ni.focus();}
+  else if(d.del){var z=d.del.split("|");cs(z[0]).e[z[1]].splice(+z[2],1);save();rerender(z[0]);}
+  else if(d.resetscale){cs(d.resetscale).scale=null;save();rerender(d.resetscale);}
+  else if(d.rmcustom){var t=state.term;state.custom[t]=(state.custom[t]||[]).filter(function(x){return x.id!==d.rmcustom;});delete state.c[d.rmcustom];save();all();}
+  else if(b.id==="nc-add"){var code=$("nc-code").value.trim(),u=num($("nc-units").value);
+    if(!code||u===null||u<=0){$("nc-code").focus();$("nc-code").placeholder="Enter a code and units";return;}
+    var id="cx"+Date.now().toString(36);(state.custom[state.term]=state.custom[state.term]||[]).push({id:id,code:code,title:"",units:u,gwa:$("nc-gwa").checked,type:"direct",custom:true});state.open[id]=true;save();all();}
+  else if(b.id==="copy-backup"){var code2=btoa(unescape(encodeURIComponent(JSON.stringify(state))));$("backup-box").value=code2;
+    try{navigator.clipboard.writeText(code2).then(function(){setText("backup-msg","Copied. Keep it somewhere safe, like your notes app.");},function(){$("backup-box").select();setText("backup-msg","Select the code above and copy it.");});}catch(e){$("backup-box").select();setText("backup-msg","Select the code above and copy it.");}}
+  else if(b.id==="restore"){try{var obj=JSON.parse(decodeURIComponent(escape(atob($("backup-box").value.trim()))));if(!obj||!obj.c)throw 0;state=Object.assign({term:"y1s1",open:{},round:false,c:{},custom:{}},obj);save();$("opt-round").checked=!!state.round;all();setText("backup-msg","Restored.");}catch(e){setText("backup-msg","That code didn't work. Paste the whole code, with nothing extra.");}}
+});
+function rerender(id){var c=findCourse(id),card=$("card-"+id);if(card){card.outerHTML=cardHTML(c);refreshCourse(c);}refreshSummary();}
+
+$("opt-round").checked=!!state.round;
+if(!Object.keys(state.open).length){state.open.bio110=true;}
+all();
+})();
+</script>
+</body>
+</html>
